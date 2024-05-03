@@ -1,0 +1,397 @@
+---
+title: "Who Let the Dogs Out?"
+author: Jonah Mergler
+output: 
+  flexdashboard::flex_dashboard:
+    theme:
+      version: 4
+      bootswatch: minty5
+    orientation: columns
+    vertical_layout: fill
+    source_code: embed
+---
+
+```{r Setup, include=FALSE}
+library(flexdashboard)
+pacman::p_load(tidyverse, knitr, DT, plotly, treemap, scales)
+df <- read.csv("breeds.csv", na.strings=c("NA","NaN", " ", "?", "null", "NULL"))
+df1 <- df[!df$weight == "null", ]
+options(scipen = 10)
+```
+
+<style>
+.chart-title { /* chart_title */
+  font-size: 20px;
+  }
+body{ /* Normal */
+  font-size: 18px;
+  }
+</style>
+
+
+Introduction 
+===
+
+Column {.tabset data-width=600}
+---
+
+### Introduction to the Study
+
+``` {r BehindTheScenes}
+df$average <- apply(df[ ,c(3:33)], 1, function(x) mean(x, na.rm=T))
+df$intelligence_average <- apply(df[ ,c(22:28)], 1, function(x) mean(x, na.rm=T))
+df$adaptability_average <- apply(df[ ,c(3:9)], 1, function(x) mean(x, na.rm=T))
+df$behavior_average <- apply(df[ ,c(10:14)], 1, function(x) mean(x, na.rm=T))
+df$health_average <- apply(df[ ,c(15:21)], 1, function(x) mean(x, na.rm=T))
+df$energy_average <- apply(df[ ,c(29:33)], 1, function(x) mean(x, na.rm=T))
+```
+
+**Data Overview**
+
+For this final presentation, I have chosen to look at a data set containing information on various dog breeds. The data set looks at 348 different dog breeds! Majority of the dataset is ordinal variables with the scale being 1-5. If a dog is bad at a category, their score will be a 1. Conversely, if a dog excels at a category, their score will be a 5. The variables are grouped into 5 different categories; a, b , c, d, and e. Category a focuses on the dogs adaptability to its environment, category b focuses on variables related to the dogs behavior, category c focuses on variables related to the dogs health and well-being, category d focuses on how easy a dog is to train and it's primal urges, lastly, category e focuses on the exercise needs of the dog. 
+
+My final project attempts to answer some of the questions below:
+
+- What dog class/type scores the highest?
+
+- What breed of dog has the best average score?
+
+- What kind of trends, if any, can I find when conducting unsupervised learning? 
+
+### Table of Data
+
+```{r Table}
+DT::datatable(df)
+```
+
+Column {.tabset data-width=400}
+---
+
+### Variable Explanation
+
+Variables
+
+- **breed**: Name of dog breed.
+- **url**: URL takes you to a site with information about the dog.
+- **a_adaptability**: General adaptability.
+- **a1_adapts_well_to_apartment_living**: Adaptability to apartment living.
+- **a2_good_for_novice_owners**: Generally how easy the dog is to take care of for new owners.
+- **a3_sensitivity_level**: How sensitive the dog is.
+- **a4_tolerates_being_alone**: How well the dog can handle being alone.
+- **a5_tolerates_cold_weather**: How well the dog can handle colder weather.
+- **a6_tolerates_hot_weather**: How well the dog can handle warmer weather.
+- **b_all_around_friendliness**: General friendliness of the dog.
+- **b1_affectionate_with_family**: How affectionate the dog is to its owners.
+- **b2_incredibly_kid_friendly_dogs**: How kind/friendly the dog is.
+- **b3_dog_friendly**: How friendly the dog is to other dogs.
+- **b4_friendly_toward_strangers**: How friendly the dog is to unfamiliar people.
+- **c_health_grooming**: The length of the movie in minutes.
+- **c1_amount_of_shedding**: The amount of shedding the dog produces.
+- **c2_drooling_potential**: Amount of drool the dog produces.
+- **c3_easy_to_groom**: How easy it is to groom the dog.
+- **c4_general_health**: Generally how healthy the dog is.
+- **c5_potential_for_weight_gain**: How likely the dog is to gain weight.
+- **c6_size**: The size of the dog.
+- **d_trainability**: How well the dog can be trained.
+- **d1_easy_to_train**: How easy it is to train the dog.
+- **d2_intelligence**: How intelligent the dog is.
+- **d3_potential_for_mouthiness**: 
+- **d4_prey_drive**: How much hunting drive the dog have.
+- **d5_tendency_to_bark_or_howl**: How much the dog barks/howls.
+- **d6_wanderlust_potential**: How adventurous and exploratory the dog is.
+- **e_exercise_needs**: How much exercise the dog needs.
+- **e1_energy_level**: How much energy the dog has.
+- **e2_intensity**: Intensity level of the dog.
+- **e3_exercise_needs**: Duplicate variable.
+- **e4_potential_for_playfulness**: How playful the dog is.
+- **breed_group**: Type/Class of dog (ie. hound dogs, herding dogs, guard dogs, etc).
+- **height**: Height range of the dog (in inches and feet).
+- **weight**: Weight range of the dog (in pounds).
+- **life_span**: Lifespan range of the dog (in years).
+
+Tree Map
+===
+
+Column {.tabset data-width=600}
+---
+
+### Tree
+
+``` {r HeatMap}
+treemap(df, 
+       index = "breed_group",
+       vSize = "health_average",
+       vColor = "energy_average",
+       title = "Dog Breeds Tree Map",
+       palette = "Blues")
+```
+
+Column {data-width=400}
+---
+
+### Analysis
+
+For this tree, the size of the box represents how healthy the breed is on average,
+where the color represents the amount of energy the breed has on average. The darker the blue
+the more energy the category of dog has. Similarly, the larger the box, the healthier the type of
+breed.
+
+
+Best Breeds/Size
+===
+
+Column {.tabset data-width=600}
+---
+
+### Best Dog by Size
+
+``` {r Boxplot}
+df <- mutate(df, general_size = case_when(
+  c6_size == 1 | c6_size == 2 ~ "Small",
+  c6_size == 3 ~ "Medium",
+  c6_size == 4 | c6_size == 5 ~ "Large"))
+
+size_order <- c("Small", "Medium", "Large")
+df$general_size <- factor(df$general_size, size_order)
+
+ggplot(df,aes(x = general_size, y = average)) +
+  geom_boxplot(col = "black", fill = "lightblue") +
+  labs(x = "Size of Breed",
+       y = "Overall Average",
+       title = "Overall Average vs Size") -> average_vs_size_plot
+
+ggplotly(average_vs_size_plot)
+```
+
+
+### Best Dog by Group
+
+``` {r Boxplot2}
+ggplot(df,aes(x = breed_group, y = average)) +
+  geom_boxplot(col = "black", fill = "lightblue") +
+  labs(x = "Group of Dog",
+       y = "Overall Average",
+       title = "Overall Average vs Dog Group") -> average_vs_size_plot1
+
+ggplotly(average_vs_size_plot1)
+```
+
+### Best Dog by Breed
+
+``` {r Barchart}
+df_best <- df %>% 
+  filter(average > mean(average, na.rm = T))
+
+df_top10 <- df_best %>% 
+  group_by(breed) %>%
+  summarise(n = n()) %>%
+  arrange(desc(n)) %>%
+  .[1:10,] 
+
+df_best10 <- df_best %>% 
+  semi_join(df_top10, by = "breed")
+
+ggplot(df_best10, aes(x = breed, y = average)) +
+  geom_col(aes(text = paste0(breed, " \n",
+                             "Average Score: ", round(average, 2), " \n",
+                             "Intelligence: ", round(intelligence_average,2), " \n",
+                             "Adaptability: ", round(adaptability_average,2), " \n",
+                             "Behavior: ", round(behavior_average,2), " \n",
+                             "Health: ", round(health_average,2), " \n",
+                             "Energy: ", round(energy_average,2), " \n",
+                             "Size: ", general_size)),
+           fill = "lightblue", col = "black") +
+  ylim(c(0,5)) +
+  theme(axis.text.x = element_text(angle=20, hjust=.8),
+        axis.text = element_text(size = 10)) +
+  labs(title = "Overall Best Breeds",
+       x = "Breed",
+       y = "Overall Average") -> top_10_breeds_chart
+
+ggplotly(top_10_breeds_chart, tooltip = "text")
+```
+
+
+Column {data-width=400}
+---
+
+### Boxplot Analysis
+
+For the boxplot, I made a new variable called "general size". I used the 
+size variable to put them into a new categorical variable. Dog breeds that scored
+a 1 or 2 were classified as small, breeds that scored a 3 were deemed medium, and 
+breeds that scored a 4 or 5 were deemed large. I mainly did it this way because when
+I grouped them like that each category had around 120. It would be harder to get
+accurate data if the sample sizes were drastically different,
+
+### Barplot Analysis
+
+For the barplot, I subset the data to the top 10 dog breeds that had the 
+highest average across all their scores. I also added a function that shows their
+general rating for the 5 main categories I touched on earlier in the presentation.
+
+
+
+Hierarchical Clustering
+===
+
+Column {.tabset data-width=600}
+---
+
+### Dendrogram 
+
+``` {r Dendrogram}
+df_features <- df[,39:43]
+
+d <- dist(df_features)
+
+hc <- hclust(d, method = "complete")
+
+plot(hc, labels = FALSE, hang = -1, main = "Hierarchical Clustering Dendrogram")
+```
+
+### Hierarchical Clustering Table
+
+``` {r HierarchicalClusteringTable}
+Cluster <- cutree(hc, 5)
+Cluster <- as.factor(Cluster)
+
+table(Cluster, df$breed_group)
+```
+
+### Hierarchical Clustering Plot
+``` {r HierarchicalClusteringPlot}
+ggplot(df, aes(x = intelligence_average, y = behavior_average, color = Cluster)) +
+  geom_point(position = position_jitter(width = 0.1, height = 0.1),
+             alpha = 0.5, size = 3.5, 
+             aes(text = paste0 (breed, " \n",
+                                "Dog Type: ", breed_group, " \n",
+                                "Behavior: ", round(behavior_average,2), " \n", 
+                                "Intelligence: ", round(intelligence_average,2)))) +
+  scale_color_manual(values = c("#ef476f", "#ffd166", "#06d6a0", "#118ab2", "#073b4c"))+
+  ylim(c(1.5,5)) +
+  xlim(c(1.5,5)) +
+  labs(x = "Intelligence",
+       y = "Behavior",
+       title = "Unsupervised Learning Between Intelligence and Adaptability")-> hc_plot
+
+ggplotly(hc_plot, tooltip = "text")
+```
+
+Column {data-width=400}
+---
+
+### Dendrogram
+
+This dendrogram has a very unique shape. It is common for the result to show three or four clusters, however here it would be better to do four or five.
+
+### Hierarchical Clustering
+
+As you can see, the five clusters are not in a spherical pattern and some of the clusters overlap a little.
+This is no particular/extremely noticeable groups which was unfortunate. However it showed that
+each dog breed is relatively different and can be hard to classify them into specific groups due to
+their differences.
+
+K-Means
+===
+
+Column {.tabset data-width=600}
+---
+
+### K-Means with Two Clusters
+
+``` {r TwoCLusters}
+iris_features <- df[,39:43]
+
+set.seed(100)
+kmeans_result <- kmeans(iris_features,
+                        centers = 2)
+
+plot(iris_features[,1], iris_features[,2], col = kmeans_result$cluster,
+     xlab = 'Intelligence', ylab = 'Adaptability', main = 'K-Means Cluster')
+points(kmeans_result$centers[,1], kmeans_result$centers[,2],
+       col = 1:4, pch = 8, cex = 2)
+```
+
+### K-Means with Three Clusters
+
+``` {r ThreeClusters}
+iris_features <- df[,39:43]
+
+set.seed(100)
+kmeans_result <- kmeans(iris_features,
+                        centers = 3)
+
+plot(iris_features[,1], iris_features[,2], col = kmeans_result$cluster,
+     xlab = 'Intelligence', ylab = 'Adaptability', main = 'K-Means Cluster')
+points(kmeans_result$centers[,1], kmeans_result$centers[,2],
+       col = 1:4, pch = 8, cex = 2)
+```
+
+### K-Means with Four Clusters
+
+``` {r FourClusters}
+iris_features <- df[,39:43]
+
+set.seed(100)
+kmeans_result <- kmeans(iris_features,
+                        centers = 4)
+
+plot(iris_features[,1], iris_features[,2], col = kmeans_result$cluster,
+     xlab = 'Intelligence', ylab = 'Adaptability', main = 'K-Means Cluster')
+points(kmeans_result$centers[,1], kmeans_result$centers[,2],
+       col = 1:4, pch = 8, cex = 2)
+```
+
+Column {data-width=400}
+---
+
+### Analysis and Conclusion
+
+For my K-means clustering I choose to do three clusters each with different K values.
+I personally think two to three clusters were the best. That being said, two clusters
+were very broad and not narrow enough, and three clusters had no real obvious groups. Similarly with 
+four clusters, most of the points overlap into other clusters which really doesn't 
+show any clear groups.
+
+About the Author
+===
+
+Column {.tabset data-width=500}
+---
+
+### Who am I?
+
+My name is Jonah Mergler and I am an undergraduate student at the University of Dayton studying Applied Mathematical Economics major with a minor in Data Analytics. I am on track to graduate in May 2025.
+
+The summer after my sophomore year and into my 5th semester at UD, I was a Financial Analysts inter with an insurance broker firm named McGohan Brabender. During my time at McGohan Brabender, I worked with the Stop Loss model for the 100+ segment and created a lot of medical renewals for a large number of unique organizations.
+
+My goal is to acquire an internship outside of the insurance industry to see what else the math workforce has else to offer. I am actively seeking employment on both Handshake and LinkedIn. If you are interested in reaching out, my linked in profile can be found [here](https://www.linkedin.com/in/jonah-mergler-dayton). 
+
+
+### References and Limitations
+
+**Limitations**
+
+I think my biggest limitation was the categorical variables that were ranges of values.
+It would have been okay to have a handful of ranges to choose from, however almost each range for 
+height or weight, for example, were completely unique. Since I had so many data entries, it
+would have taken a long time to adjust the data into similar categories or numerical data values. This
+limited what I was able to do with those values when I really wished I could have 
+explored them more.
+
+**References**
+
+[My data](https://www.kaggle.com/datasets/mexwell/dog-breeds-dogtime-dataset?resource=download)
+
+
+Column {data-width=500}
+---
+
+### Picture of Me
+
+``` {r Picture, fig.width=6, echo=FALSE, fig.cap="My friend Sam(left) and I(right) in the streets of San Deigo, California."}
+knitr::include_graphics("Sam&MeCali.jpg")
+```
+
+ 
